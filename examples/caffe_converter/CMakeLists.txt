@@ -1,9 +1,10 @@
 cmake_minimum_required( VERSION 3.2 )
 
+set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")
+include(cotire)
 project( caffe_converter )
 
 find_package( Protobuf REQUIRED )
-
 # generate CPP file for connexion between protobuf and tiny_dnn 
 PROTOBUF_GENERATE_CPP( PROTO_SRC PROTO_HDR ${CMAKE_CURRENT_SOURCE_DIR}/../../tiny_dnn/io/caffe/caffe.proto )
 
@@ -16,7 +17,7 @@ target_include_directories( caffe_converter PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
                                                ${CMAKE_CURRENT_SOURCE_DIR}/../../ )
 
 # Link with protobuf 
-target_link_libraries( caffe_converter ${PROTOBUF_LIBRARY} )
+target_link_libraries( caffe_converter ${PROTOBUF_LIBRARY} pthread )
 
 # Set C++11 mode 
 set_target_properties( caffe_converter PROPERTIES CXX_STANDARD 11 )
