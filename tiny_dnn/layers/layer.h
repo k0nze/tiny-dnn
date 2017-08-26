@@ -15,6 +15,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "tiny_dnn/core/backend.h"
 #include "tiny_dnn/core/framework/device.fwd.h"
@@ -397,6 +398,11 @@ class layer : public node {
     return vec2image<unsigned char>(*output, out_shape()[channel]);
   }
 #endif
+
+  virtual vec_t* output_to_vec(size_t channel = 0) const {
+    vec_t *output = &(*(outputs()[channel]->get_data()))[0];
+    return output;
+  }
 
   /////////////////////////////////////////////////////////////////////////
   // fprop/bprop

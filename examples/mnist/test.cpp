@@ -6,6 +6,7 @@
     in the LICENSE file.
 */
 #include <iostream>
+#include <stdint.h>
 #include "tiny_dnn/tiny_dnn.h"
 
 using namespace tiny_dnn;
@@ -19,19 +20,10 @@ double rescale(double x) {
   return 100.0 * (x - a.scale().first) / (a.scale().second - a.scale().first);
 }
 
-void convert_image(const std::string &imagefilename,
-                   double minv,
-                   double maxv,
-                   int w,
-                   int h,
-                   vec_t &data) {
-  image<> img(imagefilename, image_type::grayscale);
-  image<> resized = resize_image(img, w, h);
 
-  // mnist dataset is "white on black", so negate required
-  std::transform(
-    resized.begin(), resized.end(), std::back_inserter(data),
-    [=](uint8_t c) { return (255 - c) * (maxv - minv) / 255.0 + minv; });
+bool has_suffix(const std::string &str, const std::string &suffix) {
+    return str.size() >= suffix.size() &&
+           str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
 void recognize(const std::string &dictionary, const std::string &src_filename) {
@@ -39,9 +31,37 @@ void recognize(const std::string &dictionary, const std::string &src_filename) {
 
   nn.load(dictionary);
 
-  // convert imagefile to vec_t
   vec_t data;
-  convert_image(src_filename, -1.0, 1.0, 32, 32, data);
+  float* image;
+  uint16_t height;
+  uint16_t width;
+
+  // read image from pgm or float file
+  if(has_suffix(src_filename, ".pgm")) {
+    cout << "pgm file\n";
+    read_pgm(&image, src_filename.c_str(), &height, &width, 0);
+  } else if(has_suffix(src_filename, ".float")) {
+    cout << "float file\n";
+    read_float(&image, src_filename.c_str(), &height, &width);
+  }
+
+  for(int i = 0; i < (height*width); i++) {
+      data.push_back(image[i]);
+  }
+
+  
+  float* input;
+  input = (float*) malloc(1024*sizeof(float));
+
+
+  for(int i = 0; i < height*width; i++) {
+      input[i] = data.at(i);
+  }
+
+  write_pgm(input, height, width, "input.pgm");
+  write_float(input, height, width, "input.float");
+
+  free(input);
 
   // recognize
   auto res = nn.predict(data);
@@ -57,6 +77,7 @@ void recognize(const std::string &dictionary, const std::string &src_filename) {
     cout << scores[i].second << "," << scores[i].first << endl;
 
   // save outputs of each layer
+  /*
   for (size_t i = 0; i < nn.depth(); i++) {
     auto out_img  = nn[i]->output_to_image();
     auto filename = "layer_" + std::to_string(i) + ".png";
@@ -67,6 +88,32 @@ void recognize(const std::string &dictionary, const std::string &src_filename) {
     auto weight   = nn.at<convolutional_layer>(0).weight_to_image();
     auto filename = "weights.png";
     weight.save(filename);
+  }
+  */
+
+  for (size_t i = 0; i < nn.depth(); i++) {
+     //printf("layer %zu:\n", i);
+     vec_t* output= nn[i]->output_to_vec();
+     std::vector<shape3d> out_shape = nn[i]->out_shape();
+
+     float* image;
+     image = (float*) malloc(out_shape[0].depth_*out_shape[0].height_*out_shape[0].width_*sizeof(float));
+
+     for(int depth = 0; depth < out_shape[0].depth_; depth++) {
+         for(int row = 0; row < out_shape[0].height_; row++) {
+             for(int column = 0; column < out_shape[0].width_; column++) {
+                 image[depth*out_shape[0].height_*out_shape[0].width_ + row*out_shape[0].width_ + column] = (float) output->at(depth*out_shape[0].height_*out_shape[0].width_ + row*out_shape[0].width_ + column);
+             }
+         }
+     }
+     string filename;
+
+     filename = "layer_" + std::to_string(i) + ".pgm";
+     write_pgm(image, out_shape[0].depth_*out_shape[0].height_, out_shape[0].width_, filename.c_str());
+
+     filename = "layer_" + std::to_string(i) + ".float";
+     write_float(image, out_shape[0].depth_*out_shape[0].height_, out_shape[0].width_, filename.c_str());
+     free(image);
   }
 }
 
