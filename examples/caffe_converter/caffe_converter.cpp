@@ -17,6 +17,7 @@ using namespace tiny_dnn;
 using namespace tiny_dnn::activation;
 using namespace std;
 
+/*
 image<float> compute_mean(const string &mean_file, int width, int height) {
   caffe::BlobProto blob;
   detail::read_proto_from_binary(mean_file, &blob);
@@ -57,17 +58,24 @@ vector<string> get_label_list(const string &label_file) {
 
   return lines;
 }
+*/
 
-void test(const string &model_file,
-          const string &trained_file,
-          const string &mean_file,
-          const string &label_file,
-          const string &img_file) {
-  auto labels = get_label_list(label_file);
+void usage() {
+    cout << "./caffe_converter *.prototxt *.caffemodel\n";
+}
+
+void convert(const string &model_file,
+          const string &trained_file) {//,
+          //const string &mean_file,
+          //const string &label_file,
+          //const string &img_file) {
+  //auto labels = get_label_list(label_file);
   auto net    = create_net_from_caffe_prototxt(model_file);
   reload_weight_from_caffe_protobinary(trained_file, net.get());
 
+  net->save("caffe_model");
   // int channels = (*net)[0]->in_data_shape()[0].depth_;
+  /*
   int width  = (*net)[0]->in_data_shape()[0].width_;
   int height = (*net)[0]->in_data_shape()[0].height_;
 
@@ -98,18 +106,26 @@ void test(const string &model_file,
       distance(result.begin(), find(result.begin(), result.end(), sorted[i]));
     cout << labels[idx] << "," << sorted[i] << endl;
   }
+  */
 }
 
 int main(int argc, char **argv) {
+
+  if(argc != 3) {
+    usage();
+    return 1;
+  }
+
   int arg_channel     = 1;
   string model_file   = argv[arg_channel++];
   string trained_file = argv[arg_channel++];
-  string mean_file    = argv[arg_channel++];
-  string label_file   = argv[arg_channel++];
-  string img_file     = argv[arg_channel++];
+  //string mean_file    = argv[arg_channel++];
+  //string label_file   = argv[arg_channel++];
+  //string img_file     = argv[arg_channel++];
 
   try {
-    test(model_file, trained_file, mean_file, label_file, img_file);
+    //test(model_file, trained_file, mean_file, label_file, img_file);
+    convert(model_file, trained_file);
   } catch (const nn_error &e) {
     cout << e.what() << endl;
   }

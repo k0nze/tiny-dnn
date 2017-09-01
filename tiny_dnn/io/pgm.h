@@ -14,13 +14,15 @@ typedef float float_t;
  * @param width
  * @param negate (invert grayscale)
  */
-int read_pgm(float_t** image, const char* filename, uint16_t *height, uint16_t *width, uint8_t negate) {
+int read_pgm(float_t** image, const char* filename, uint16_t *height, uint16_t *width, float_t lower_bound, float_t upper_bound) {
     FILE* image_file;
     image_file = fopen(filename, "r");
 
     if(!image_file) {
         return 1;
     }
+
+    float_t range = fabs(lower_bound - upper_bound);
 
     // read magic number
     char line[100];
@@ -46,7 +48,7 @@ int read_pgm(float_t** image, const char* filename, uint16_t *height, uint16_t *
 
     for(int i = 0; i < (*height)*(*width); i++) {
         fread(&u8, sizeof(uint8_t), 1, image_file);
-        (*image)[i] = (float_t) ((u8 / 255.0f) -0.5) * ((negate == 1) ? -2.0 : 2.0);
+        (*image)[i] = (float_t) ((u8 / 255.0f) * range) + lower_bound ;
     }
 
     fclose(image_file);
